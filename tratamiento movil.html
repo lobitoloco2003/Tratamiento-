@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Tratamiento GSB-142</title>
+    <style>
+        /* Estilos Base y Adaptabilidad */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #eef2f3; 
+            padding: 10px; 
+            margin: 0;
+            color: #333; 
+        }
+        
+        /* Contenedor Superior: Flexible para PC y apilado para Móvil */
+        .header-container { 
+            display: flex; 
+            flex-direction: row; 
+            gap: 15px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap; /* Permite que bajen los paneles en móvil */
+        }
+        
+        .panel { 
+            background: #fff; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            flex: 1; 
+            min-width: 300px; /* Evita que se compriman demasiado */
+        }
+        
+        .input-group { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        label { font-weight: bold; font-size: 0.9em; }
+        input { padding: 8px; width: 70px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+
+        /* Botones */
+        .btn-container { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        #btnCalcular { 
+            flex: 2; padding: 12px; border: none; border-radius: 6px; cursor: pointer; 
+            font-weight: bold; background-color: #007bff; color: white; transition: 0.3s;
+        }
+        #btnCalcular.success { background-color: #28a745; }
+        .btn-print { flex: 1; padding: 12px; border-radius: 6px; background: #6c757d; color:white; border:none; cursor:pointer; }
+
+        /* Resumen Rápido */
+        .resumen-panel { border-left: 5px solid #007bff; background: #f8f9fa; }
+        .resumen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em; }
+        .resumen-item { background: white; padding: 6px; border-radius: 4px; border: 1px solid #eee; }
+
+        /* DOCUMENTO ADAPTATIVO */
+        .documento { 
+            background: white; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 5% 40px; 
+            border: 1px solid #bbb; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+            line-height: 1.5;
+            box-sizing: border-box;
+            overflow-x: auto; /* Permite scroll horizontal si la tabla es muy grande en móvil */
+        }
+
+        h1, h2 { text-align: center; font-size: 1.2em; margin: 5px 0; }
+        .section-title { font-weight: bold; text-decoration: underline; margin-top: 20px; display: block; }
+        
+        table { width: 100%; margin: 15px 0; border-collapse: collapse; font-size: 0.9em; }
+        th, td { border: 1px solid #333; padding: 6px; text-align: center; }
+        .highlight { background-color: #fff200; font-weight: bold; }
+
+        /* AJUSTES ESPECÍFICOS PARA MÓVIL */
+        @media (max-width: 600px) {
+            .header-container { flex-direction: column; }
+            .documento { padding: 20px 15px; border: none; }
+            h1, h2 { font-size: 1em; }
+            .resumen-grid { grid-template-columns: 1fr; } /* Resumen en una sola columna */
+            body { padding: 5px; }
+        }
+
+        /* AJUSTES PARA IMPRESIÓN */
+        @media print { 
+            .header-container { display: none; } 
+            .documento { border: none; box-shadow: none; width: 100%; padding: 0; } 
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-container">
+    <div class="panel">
+        <h3>⚙️ Configuración</h3>
+        <div class="input-group">
+            <label>Lote 1 (kg):</label> <input type="number" id="c1" value="50" oninput="resetBoton()">
+        </div>
+        <div class="input-group">
+            <label>Lote 2 (kg):</label> <input type="number" id="c2" value="50" oninput="resetBoton()">
+        </div>
+        <div class="input-group">
+            <label>Lote 3 (kg):</label> <input type="number" id="c3" value="50" oninput="resetBoton()">
+        </div>
+        <div class="input-group">
+            <label>% Alcanfor:</label> <input type="number" id="pAlcanfor" value="6" step="0.1" oninput="resetBoton()">
+        </div>
+        <div class="btn-container">
+            <button id="btnCalcular" onclick="calcular()">GENERAR RECETA</button>
+            <button class="btn-print" onclick="window.print()">🖨️</button>
+        </div>
+    </div>
+
+    <div class="panel resumen-panel">
+        <h3>📊 Guía Rápida</h3>
+        <div class="resumen-grid">
+            <div class="resumen-item">Pólvora: <strong id="res_p_total">0</strong> kg</div>
+            <div class="resumen-item">Alcanfor: <strong id="res_alc_total">0</strong> g</div>
+            <div class="resumen-item">Alcohol: <strong id="res_oh_total">0</strong> g</div>
+            <div class="resumen-item">Agua: <strong id="res_h2o_total">0</strong> g</div>
+            <div class="resumen-item">Pre-graf: <strong id="res_g_pre">0</strong> g</div>
+            <div class="resumen-item">Graf-fin: <strong id="res_g_fin">0</strong> g</div>
+        </div>
+    </div>
+</div>
+
+<div class="documento">
+    <h1>Tratamiento Superficial</h1>
+    <h2>GSB-142 (20x139)</h2>
+    
+    <p><strong><u>Agente:</u></strong> <span id="doc_perc">6.00</span> % Alcanfor.</p>
+
+    <span class="section-title">PREGRAFITADO:</span>
+    <p>Carga: <span class="highlight"><span id="doc_total_kg">150</span> Kg de pólvora</span>.<br>
+    <strong>Pregrafitamos</strong> al 0,05% (<span id="doc_g_pre">75</span> g) durante 20 min.</p>
+
+    <span class="section-title">FASE 1: (Disolución)</span>
+    <table>
+        <tr>
+            <th>Componente</th>
+            <th>Bidón 1</th>
+            <th>Bidón 2</th>
+        </tr>
+        <tr>
+            <td>Alcanfor</td>
+            <td><span id="tab_alc1">0</span> g</td>
+            <td><span id="tab_alc2">0</span> g</td>
+        </tr>
+        <tr>
+            <td>Alcohol</td>
+            <td><span id="tab_oh1">0</span> g</td>
+            <td><span id="tab_oh2">0</span> g</td>
+        </tr>
+        <tr>
+            <td>Agua</td>
+            <td><span id="tab_h2o1">0</span> g</td>
+            <td><span id="tab_h2o2">0</span> g</td>
+        </tr>
+    </table>
+
+    <span class="section-title">GRAFITADO FINAL:</span>
+    <p>Añadir 0,12% grafito (<span id="doc_g_fin">180</span> g) y dejar 45 min.</p>
+</div>
+
+<script>
+function resetBoton() {
+    const btn = document.getElementById('btnCalcular');
+    btn.classList.remove('success');
+    btn.innerText = "GENERAR RECETA";
+}
+
+function calcular() {
+    const c1 = parseFloat(document.getElementById('c1').value) || 0;
+    const c2 = parseFloat(document.getElementById('c2').value) || 0;
+    const c3 = parseFloat(document.getElementById('c3').value) || 0;
+    const porc = parseFloat(document.getElementById('pAlcanfor').value) || 0;
+
+    const totalKg = c1 + c2 + c3;
+    const alcTotal = totalKg * 1000 * (porc / 100);
+    const alcCasilla = alcTotal / 4;
+
+    // Resumen
+    document.getElementById('res_p_total').innerText = totalKg;
+    document.getElementById('res_alc_total').innerText = alcTotal.toFixed(0);
+    document.getElementById('res_oh_total').innerText = (alcCasilla * 2.5502 * 4).toFixed(0);
+    document.getElementById('res_h2o_total').innerText = (alcCasilla * 0.4502 * 4).toFixed(0);
+    document.getElementById('res_g_pre').innerText = (totalKg * 0.5).toFixed(0);
+    document.getElementById('res_g_fin').innerText = (totalKg * 1.2).toFixed(0);
+
+    // Documento
+    document.getElementById('doc_total_kg').innerText = totalKg;
+    document.getElementById('doc_perc').innerText = porc.toFixed(2);
+    document.getElementById('doc_g_pre').innerText = (totalKg * 0.5).toFixed(0);
+    document.getElementById('doc_g_fin').innerText = (totalKg * 1.2).toFixed(0);
+
+    // Tabla
+    const ids = ['tab_alc1', 'tab_alc2', 'tab_oh1', 'tab_oh2', 'tab_h2o1', 'tab_h2o2'];
+    const vals = [alcCasilla, alcCasilla, alcCasilla*2.5502, alcCasilla*2.5502, alcCasilla*0.4502, alcCasilla*0.4502];
+    ids.forEach((id, i) => document.getElementById(id).innerText = vals[i].toFixed(0));
+
+    const btn = document.getElementById('btnCalcular');
+    btn.classList.add('success');
+    btn.innerText = "¡OK!";
+}
+window.onload = calcular;
+</script>
+</body>
+</html>
